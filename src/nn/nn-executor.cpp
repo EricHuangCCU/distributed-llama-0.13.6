@@ -137,6 +137,15 @@ static inline void *executorThreadHandler(void *arg) {
     NnUint nThreads = context->nThreads;
     NnUint doneCount = nThreads - 1;
 
+    /*
+    
+    // Verify that the thread ID in the program is the same as the actual CPU core
+    unsigned int threadIndex = thread->threadIndex;
+    int coreId = sched_getcpu();
+
+    printf("👉 Thread %u started on CPU core %d\n", threadIndex, coreId);
+    */
+
     while (true) {
         const unsigned int currentStepIndex = context->currentStepIndex.load();
         if (currentStepIndex == context->nSteps)
@@ -159,6 +168,10 @@ static inline void *executorThreadHandler(void *arg) {
             while (context->currentStepIndex.load() == currentStepIndex);
         }
     }
+    /*
+    
+    printf("🔚 Thread %u exiting (last seen on CPU core %d)\n", threadIndex, sched_getcpu());
+    */
     return nullptr;
 }
 
@@ -176,6 +189,37 @@ void NnExecutor::forward() {
     }
 
     NnUint threadIndex;
+    
+    //eric edit
+    /*
+    */
+   // 綁定主 thread (thread 0)
+       cpu_set_t cpuset_main;
+       CPU_ZERO(&cpuset_main);
+       CPU_SET(0, &cpuset_main);  // thread 0 綁定 core 0
+       pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset_main);
+
+       // 創建其他 thread 並綁定核心
+       for (threadIndex = 1; threadIndex < nThreads; threadIndex++) {
+           int result = pthread_create(&threads[threadIndex].handler, NULL, 
+                                       (PthreadFunc)executorThreadHandler, 
+                                       (void *)&threads[threadIndex]);
+           if (result != 0)
+               throw std::runtime_error("Failed to create thread");
+
+           // 綁定 thread 到對應核心
+           cpu_set_t cpuset;
+           CPU_ZERO(&cpuset);
+           CPU_SET(threadIndex, &cpuset);  // threadIndex 對應 core index
+           result = pthread_setaffinity_np(threads[threadIndex].handler, sizeof(cpu_set_t), &cpuset);
+           if (result != 0)
+               throw std::runtime_error("Failed to set thread affinity");
+       }
+
+       // 主 thread 處理自己的工作 (thread 0)
+       executorThreadHandler((void *)&threads[0]);
+
+
     for (threadIndex = 1; threadIndex < nThreads; threadIndex++) {
         int result = pthread_create(&threads[threadIndex].handler, NULL, (PthreadFunc)executorThreadHandler, (void *)&threads[threadIndex]);
         if (result != 0)
