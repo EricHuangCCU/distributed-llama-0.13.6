@@ -80,9 +80,19 @@ void dequantizeQ40toF32(const NnBlockQ40 *x, float *output, const NnUint n, cons
 const char *floatTypeToString(NnFloatType type);
 
 #define SPLIT_THREADS(varStart, varEnd, rangeLen, nThreads, threadIndex) \
-    const NnUint rangeSlice = rangeLen / nThreads; \
-    const NnUint rangeRest = rangeLen % nThreads; \
-    const NnUint varStart = threadIndex * rangeSlice + (threadIndex < rangeRest ? threadIndex : rangeRest); \
-    const NnUint varEnd = varStart + rangeSlice + (threadIndex < rangeRest ? 1 : 0);
+    const int n_little = 4; \
+    const int n_big    = 4; \
+    const int little_weight = 1; \
+    const int big_weight    = 3; \
+    const int total_weight = n_little * little_weight + n_big * big_weight; \
+    const int base = (rangeLen) / total_weight; \
+    const int remainder = (rangeLen) % total_weight; \
+    int prefix_weight = 0; \
+    for (int __i = 0; __i < (threadIndex); __i++) { \
+        prefix_weight += (__i < n_little ? little_weight : big_weight); \
+    } \
+    const int weight = ((threadIndex) < n_little ? little_weight : big_weight); \
+    const NnUint varStart = prefix_weight * base + (prefix_weight < remainder ? prefix_weight : remainder); \
+    const NnUint varEnd   = (prefix_weight + weight) * base + ((prefix_weight + weight) < remainder ? (prefix_weight + weight) : remainder);
 
 #endif
