@@ -65,6 +65,23 @@ void testSplitThreads() {
         assert(b0Start == 4);
         assert(b0End == 4);
     }
+    /*
+    // test for weighted result
+    const int nThreads = 8;
+    const int rangeLen = 192;  
+    int expectedStarts[nThreads] = {0, 12, 24, 36, 48, 84, 120, 156};
+    int expectedEnds[nThreads]   = {12, 24, 36, 48, 84, 120, 156, 192};
+ 
+    for (int i = 0; i < nThreads; i++) {
+        SPLIT_THREADS(start, end, rangeLen, nThreads, i);
+        printf("Thread %d: [%u, %u)\n", i, start, end);
+ 
+        assert(start == expectedStarts[i]);
+        assert(end   == expectedEnds[i]);
+    }
+ }
+    */
+    {
 
     printf("✅ %24s passed\n", "splitThreads");
 }
