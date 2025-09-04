@@ -143,7 +143,7 @@ static inline void *executorThreadHandler(void *arg) {
     unsigned int threadIndex = thread->threadIndex;
     int coreId = sched_getcpu();
 
-    printf("👉 Thread %u started on CPU core %d\n", threadIndex, coreId);
+    printf("    👉 Thread %u started on CPU core %d\n", threadIndex, coreId);
     */
 
     while (true) {
@@ -204,6 +204,7 @@ void NnExecutor::forward() {
            int result = pthread_create(&threads[threadIndex].handler, NULL, 
                                        (PthreadFunc)executorThreadHandler, 
                                        (void *)&threads[threadIndex]);
+
            if (result != 0)
                throw std::runtime_error("Failed to create thread");
 
@@ -220,14 +221,15 @@ void NnExecutor::forward() {
        executorThreadHandler((void *)&threads[0]);
 
 
-    for (threadIndex = 1; threadIndex < nThreads; threadIndex++) {
-        int result = pthread_create(&threads[threadIndex].handler, NULL, (PthreadFunc)executorThreadHandler, (void *)&threads[threadIndex]);
-        if (result != 0)
-            throw std::runtime_error("Failed to create thread");
-    }
-    executorThreadHandler((void *)&threads[0]);
+    // for (threadIndex = 1; threadIndex < nThreads; threadIndex++) {
+    //     int result = pthread_create(&threads[threadIndex].handler, NULL, (PthreadFunc)executorThreadHandler, (void *)&threads[threadIndex]);
+    //     if (result != 0)
+    //         throw std::runtime_error("Failed to create thread");
+    // }
+    //executorThreadHandler((void *)&threads[0]);
     for (threadIndex = 1; threadIndex < nThreads; threadIndex++)
         pthread_join(threads[threadIndex].handler, NULL);
+
 }
 
 NnUint NnExecutor::getTotalTime(NnExecutorStepType type) {

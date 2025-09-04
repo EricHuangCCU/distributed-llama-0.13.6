@@ -79,20 +79,27 @@ void dequantizeQ40toF32(const NnBlockQ40 *x, float *output, const NnUint n, cons
 
 const char *floatTypeToString(NnFloatType type);
 
+//eric modify
+#ifndef WLR_WEIGHTS
+#define WLR_WEIGHTS {1,1,1,1,4,4,4,4}
+#endif
+
 #define SPLIT_THREADS(varStart, varEnd, rangeLen, nThreads, threadIndex) \
-    const int n_little = 4; \
-    const int n_big    = 4; \
-    const int little_weight = 1; \
-    const int big_weight    = 3; \
-    const int total_weight = n_little * little_weight + n_big * big_weight; \
-    const int base = (rangeLen) / total_weight; \
-    const int remainder = (rangeLen) % total_weight; \
-    int prefix_weight = 0; \
-    for (int __i = 0; __i < (threadIndex); __i++) { \
-        prefix_weight += (__i < n_little ? little_weight : big_weight); \
-    } \
-    const int weight = ((threadIndex) < n_little ? little_weight : big_weight); \
-    const NnUint varStart = prefix_weight * base + (prefix_weight < remainder ? prefix_weight : remainder); \
-    const NnUint varEnd   = (prefix_weight + weight) * base + ((prefix_weight + weight) < remainder ? (prefix_weight + weight) : remainder);
+    NnUint varStart = 0;                                                      \
+    NnUint varEnd   = 0;                                                      \
+    do {                                                                      \
+        const double __weights[] = WLR_WEIGHTS;                               \
+        const NnUint __Nw = (NnUint)(sizeof(__weights)/sizeof(__weights[0])); \
+        NnUint __T = (NnUint)(nThreads);                                      \
+        if (__T > __Nw) __T = __Nw;                                           \
+        const NnUint __tid = (NnUint)(threadIndex);                           \
+        if (__tid >= __T || __T == 0) break;                                  \
+        double __W = 0.0;                                                     \
+        for (NnUint __i = 0; __i < __T; ++__i) __W += __weights[__i];         \
+        double __S = 0.0;                                                     \
+        for (NnUint __i = 0; __i < __tid; ++__i) __S += __weights[__i];       \
+        varStart = (NnUint)((rangeLen * __S) / __W);                          \
+        varEnd   = (NnUint)((rangeLen * (__S + __weights[__tid])) / __W);     \
+    } while (0)
 
 #endif
